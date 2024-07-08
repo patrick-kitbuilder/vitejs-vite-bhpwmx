@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SVG Nesting</title>
+    <script src="svgnest.js"></script>
+    <script src="svgparser.js"></script>
+    <script src="geometryutil.js"></script>
+    <script src="json.js"></script>
+    <script src="matrix.js"></script>
+    <script src="parallel.js"></script>
+    <script src="clipper.js"></script>
+    <script src="domparser.js"></script>
+    <script src="eval.js"></script>
+    <script src="filesaver.js"></script>
+    <script src="pathsegpolyfill.js"></script>
+    <script src="placementworker.js"></script>
+    <script src="easytabs.js"></script>
+</head>
+<body>
+    <div id="svgnest">
+        <input type="file" id="fileinput" style="display: none;">
+        <div id="upload" class="button">Upload SVG</div>
+        <div id="demo" class="button">Demo</div>
+        <div id="start" class="button">Start Nest</div>
+        <div id="download" class="button">Download</div>
+        <div id="select"></div>
+        <div id="message" class="active animated bounce"></div>
+    </div>
+    <script>
+    function ready(fn){
+        if (document.readyState != 'loading'){
+            fn();
+        }
+        else {
+            document.addEventListener('DOMContentLoaded', fn);
+        }
+    }
+
+    ready(function(){
+        // Initialization and event listener setup...
+        var demo = document.getElementById('demo');
+        var upload = document.getElementById('upload');
+        var start = document.getElementById('start');
+        var display = document.getElementById('select');
+        var fileinput = document.getElementById('fileinput');
+        var message = document.getElementById('message');
+
+        demo.onclick = function(){
+            startnest();
+        };
+
+        upload.onclick = function(){
+            fileinput.click();
+        };
+
+        fileinput.onchange = function(e){
+            handleFile(e.target.files[0]);
+        };
+
+        function handleFile(file){
+            if(!file){
+                return;
+            }
+
+            if(!file.type || (file.type.search('svg') < 0 && file.type.search('xml') < 0 &&  file.type.search('text') < 0)){
+                message.innerHTML = 'Only SVG files allowed';
+                message.className = 'error animated bounce';
+                return;
+            }
+            
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                if(reader.result){
+                    try{
+                        var svg = window.SvgNest.parsesvg(reader.result);
+                        display.innerHTML = '';
+                        display.appendChild(svg);
+                    }
+                    catch(e){
+                        message.innerHTML = e;
+                        message.className = 'error animated bounce';
+                        return;
+                    }                    
+                    
+                    message.innerHTML = 'Click on the outline to use as the bin';
+                    message.className = 'active animated bounce';
+                    start.className = 'button start';
+
+                    attachSvgListeners(svg);
+                }
+            };
+            
+            reader.readAsText(file);
+        };
+
+        function attachSvgListeners(svg){
+            for(var i=0; i<svg.childNodes.length; i++){
+                var node = svg.childNodes[i];
+                if(node.nodeType == 1){
+                    node.onclick = function(){
+                        if(display.className == 'disabled'){
+                            return;
+                        }
+                        var currentbin = document.querySelector('#select .active');
+                        if(currentbin){
+                            var className = currentbin.getAttribute('class').replace('active', '').trim();
+                            if(!className)
+                                currentbin.removeAttribute('class');
+                            else
+                                currentbin.setAttribute('class', className);
+                        }
+                        this.setAttribute('class', 'active');
+                        start.className = 'button start';
+                    };
+                }
+            }
+        }
+
+        function startnest(){
+            var binPolygon = getBinPolygon();
+            var paths = getPaths();
+
+            console.log("Bin Polygon:", binPolygon);
+            console.log("Paths before processing:", paths);
+
+            if (!paths || paths.length === 0) {
+                console.error("Paths are not initialized correctly:", paths);
+                return;
+            }
+
+            for (var i = 0; i < paths.length; i++) {
+                if (!paths[i].id) {
+                    paths[i].id = i + 1;  // Assign an ID if not already present
+                }
+            }
+
+            var ids = paths.map(path => path.id);
+            var rotations = paths.map(path => path.rotation || 0);
+            var config = getConfig();
+            var nfpCache = {}; 
+
+            console.log("Paths after adding IDs:", paths);
+
+            var worker = new PlacementWorker(binPolygon, paths, ids, rotations, config, nfpCache);
+            var result = worker.placePaths(paths);
+
+            console.log("Nesting result:", result);
+        }
+
+        function getPaths() {
+            // This function should return the array of paths
+            // Ensure each path has the required properties, including id
+            return [
+                { id: 1, points: [{x: 0, y: 0}, {x: 10, y: 0}, {x: 10, y: 10}, {x: 0, y: 10}], rotation: 0 },
+                { id: 2, points: [{x: 20, y: 20}, {x: 30, y: 20}, {x: 30, y: 30}, {x: 20, y: 30}], rotation: 0 }
+            ];
+        }
+
+        function getBinPolygon() {
+            // This function should return the bin polygon
+            return [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }, { x: 0, y: 100 }];
+        }
+
+        function getConfig() {
+            // This function should return the configuration object
+            return {
+                clipperScale: 10000000
+            };
+        }
+    });
+    </script>
+</body>
+</html>
