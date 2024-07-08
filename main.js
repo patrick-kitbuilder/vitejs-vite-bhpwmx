@@ -2,6 +2,16 @@ import './style.css'
 import javascriptLogo from './javascript.svg'
 import viteLogo from '/vite.svg'
 import { setupCounter } from './counter.js'
+import './util/pathsegpolyfill.js';
+import './util/matrix.js';
+import './util/domparser.js';
+import './util/clipper.js';
+import './util/parallel.js';
+import './util/geometryutil.js';
+import './util/placementworker.js';
+import './svgparser.js';
+import './svgnest.js';
+import './util/filesaver.js';
 
 document.querySelector('#app').innerHTML = `
   <div>

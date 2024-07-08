@@ -1,156 +1,95 @@
-// matrix utility from SvgPath
-// https://github.com/fontello/svgpath
+// matrix.js
+(function(root) {
+  'use strict';
 
-'use strict';
-
-function Matrix() {
-  if (!(this instanceof Matrix)) { return new Matrix(); }
-  this.queue = [];   // list of matrixes to apply
-  this.cache = null; // combined matrix cache
-}
-(typeof window !== 'undefined' ? window : self).Matrix = Matrix;
-
-// combine 2 matrixes
-// m1, m2 - [a, b, c, d, e, g]
-//
-Matrix.prototype.combine = function(m1, m2) {
-  return [
-    m1[0] * m2[0] + m1[2] * m2[1],
-    m1[1] * m2[0] + m1[3] * m2[1],
-    m1[0] * m2[2] + m1[2] * m2[3],
-    m1[1] * m2[2] + m1[3] * m2[3],
-    m1[0] * m2[4] + m1[2] * m2[5] + m1[4],
-    m1[1] * m2[4] + m1[3] * m2[5] + m1[5]
-  ];
-}
-
-Matrix.prototype.isIdentity = function(){
-	if (!this.cache) {
-		this.cache = this.toArray();
-	  }
-
-	  var m = this.cache;
-	  
-	  if (m[0] === 1 && m[1] === 0 && m[2] === 0 && m[3] === 1 && m[4] === 0 && m[5] === 0) {
-		return true;
-	  }
-	  return false;
-}
-
-Matrix.prototype.matrix = function (m) {
-  if (m[0] === 1 && m[1] === 0 && m[2] === 0 && m[3] === 1 && m[4] === 0 && m[5] === 0) {
-    return this;
-  }
-  this.cache = null;
-  this.queue.push(m);
-  return this;
-};
-
-
-Matrix.prototype.translate = function (tx, ty) {
-  if (tx !== 0 || ty !== 0) {
-    this.cache = null;
-    this.queue.push([ 1, 0, 0, 1, tx, ty ]);
-  }
-  return this;
-};
-
-
-Matrix.prototype.scale = function (sx, sy) {
-  if (sx !== 1 || sy !== 1) {
-    this.cache = null;
-    this.queue.push([ sx, 0, 0, sy, 0, 0 ]);
-  }
-  return this;
-};
-
-
-Matrix.prototype.rotate = function (angle, rx, ry) {
-  var rad, cos, sin;
-
-  if (angle !== 0) {
-    this.translate(rx, ry);
-
-    rad = angle * Math.PI / 180;
-    cos = Math.cos(rad);
-    sin = Math.sin(rad);
-
-    this.queue.push([ cos, sin, -sin, cos, 0, 0 ]);
-    this.cache = null;
-
-    this.translate(-rx, -ry);
-  }
-  return this;
-};
-
-
-Matrix.prototype.skewX = function (angle) {
-  if (angle !== 0) {
-    this.cache = null;
-    this.queue.push([ 1, 0, Math.tan(angle * Math.PI / 180), 1, 0, 0 ]);
-  }
-  return this;
-};
-
-
-Matrix.prototype.skewY = function (angle) {
-  if (angle !== 0) {
-    this.cache = null;
-    this.queue.push([ 1, Math.tan(angle * Math.PI / 180), 0, 1, 0, 0 ]);
-  }
-  return this;
-};
-
-
-// Flatten queue
-//
-Matrix.prototype.toArray = function () {
-  if (this.cache) {
-    return this.cache;
+  function Matrix(a, b, c, d, e, f) {
+      this.a = a || 1;
+      this.b = b || 0;
+      this.c = c || 0;
+      this.d = d || 1;
+      this.e = e || 0;
+      this.f = f || 0;
   }
 
-  if (!this.queue.length) {
-    this.cache = [ 1, 0, 0, 1, 0, 0 ];
-    return this.cache;
-  }
+  Matrix.prototype.multiply = function(matrix) {
+      return new Matrix(
+          this.a * matrix.a + this.c * matrix.b,
+          this.b * matrix.a + this.d * matrix.b,
+          this.a * matrix.c + this.c * matrix.d,
+          this.b * matrix.c + this.d * matrix.d,
+          this.a * matrix.e + this.c * matrix.f + this.e,
+          this.b * matrix.e + this.d * matrix.f + this.f
+      );
+  };
 
-  this.cache = this.queue[0];
+  Matrix.prototype.inverse = function() {
+      const det = this.a * this.d - this.b * this.c;
+      return new Matrix(
+          this.d / det,
+          -this.b / det,
+          -this.c / det,
+          this.a / det,
+          (this.c * this.f - this.d * this.e) / det,
+          (this.b * this.e - this.a * this.f) / det
+      );
+  };
 
-  if (this.queue.length === 1) {
-    return this.cache;
-  }
+  Matrix.prototype.translate = function(tx, ty) {
+      return this.multiply(new Matrix(1, 0, 0, 1, tx, ty));
+  };
 
-  for (var i = 1; i < this.queue.length; i++) {
-    this.cache = this.combine(this.cache, this.queue[i]);
-  }
+  Matrix.prototype.scale = function(sx, sy) {
+      return this.multiply(new Matrix(sx, 0, 0, sy, 0, 0));
+  };
 
-  return this.cache;
-};
+  Matrix.prototype.rotate = function(angle, x, y) {
+      x = x || 0;
+      y = y || 0;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      return this.multiply(new Matrix(cos, sin, -sin, cos, x, y));
+  };
 
+  Matrix.prototype.skewX = function(angle) {
+      return this.multiply(new Matrix(1, 0, Math.tan(angle), 1, 0, 0));
+  };
 
-// Apply list of matrixes to (x,y) point.
-// If `isRelative` set, `translate` component of matrix will be skipped
-//
-Matrix.prototype.calc = function (x, y, isRelative) {
-  var m, i, len;
+  Matrix.prototype.skewY = function(angle) {
+      return this.multiply(new Matrix(1, Math.tan(angle), 0, 1, 0, 0));
+  };
 
-  // Don't change point on empty transforms queue
-  if (!this.queue.length) { return [ x, y ]; }
+  Matrix.prototype.decompose = function() {
+      const scaleX = Math.sqrt(this.a * this.a + this.b * this.b);
+      const scaleY = (this.a * this.d - this.b * this.c) / scaleX;
+      const skewX = Math.atan2(this.a * this.c + this.b * this.d, scaleX * scaleY);
+      const rotation = Math.atan2(this.b, this.a);
+      const translateX = this.e;
+      const translateY = this.f;
+      return {
+          scaleX: scaleX,
+          scaleY: scaleY,
+          skewX: skewX,
+          rotation: rotation,
+          translateX: translateX,
+          translateY: translateY
+      };
+  };
 
-  // Calculate final matrix, if not exists
-  //
-  // NB. if you deside to apply transforms to point one-by-one,
-  // they should be taken in reverse order
+  Matrix.prototype.toArray = function() {
+      return [this.a, this.b, this.c, this.d, this.e, this.f];
+  };
 
-  if (!this.cache) {
-    this.cache = this.toArray();
-  }
+  Matrix.prototype.applyToPoint = function(x, y) {
+      return {
+          x: this.a * x + this.c * y + this.e,
+          y: this.b * x + this.d * y + this.f
+      };
+  };
 
-  m = this.cache;
+  Matrix.prototype.applyToArray = function(points) {
+      return points.map(point => this.applyToPoint(point.x, point.y));
+  };
 
-  // Apply matrix to point
-  return [
-    x * m[0] + y * m[2] + (isRelative ? 0 : m[4]),
-    x * m[1] + y * m[3] + (isRelative ? 0 : m[5])
-  ];
-};
+  root.Matrix = Matrix;
+
+}(typeof window !== 'undefined' ? window : global));
