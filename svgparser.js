@@ -4,7 +4,7 @@
  * Licensed under the MIT license
  */
  
- (function(root){
+(function(root){
 	'use strict';
 	
 	function SvgParser(){
