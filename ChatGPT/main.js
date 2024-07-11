@@ -414,6 +414,7 @@
 			
 			function renderSvg(svglist, efficiency, placed, total){
 				iterations++;
+				
 				document.getElementById('info_iterations').innerHTML = iterations;
 				
 				if(!svglist || svglist.length == 0){
@@ -438,6 +439,11 @@
 				document.getElementById('info_placement').setAttribute('style','display: block');
 				display.setAttribute('style','display: none');
 				download.className = 'button download animated bounce';
+				
+				if(iterations > 4) {
+					stopnest();
+					alert ('Completed')
+				}
 			}
 			
 			message.onclick = function(e){
