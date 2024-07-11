@@ -21,60 +21,6 @@
 			toleranceSvg: 0.005 // fudge factor for browser inaccuracy in SVG unit handling
 		}; 
 	}
-
-	SvgNest.prototype.detectGroups = function(parts) {
-		let groups = [];
-		let visited = new Set();
-	
-		for (let i = 0; i < parts.length; i++) {
-			if (visited.has(i)) continue;
-	
-			let group = [];
-			let queue = [i];
-	
-			while (queue.length > 0) {
-				let currentIndex = queue.shift();
-				if (visited.has(currentIndex)) continue;
-	
-				visited.add(currentIndex);
-				group.push(parts[currentIndex]);
-	
-				for (let j = 0; j < parts.length; j++) {
-					if (visited.has(j)) continue;
-	
-					if (this.arePartsTouchingOrOverlapping(parts[currentIndex], parts[j])) {
-						queue.push(j);
-					}
-				}
-			}
-	
-			groups.push(group);
-		}
-	
-		return groups;
-	};
-	
-	SvgNest.prototype.arePartsTouchingOrOverlapping = function(part1, part2) {
-		// Get bounding boxes
-		let bb1 = this.getBoundingBox(part1);
-		let bb2 = this.getBoundingBox(part2);
-	
-		// Check if bounding boxes overlap
-		return !(bb1.x + bb1.width < bb2.x || bb1.x > bb2.x + bb2.width || bb1.y + bb1.height < bb2.y || bb1.y > bb2.y + bb2.height);
-	};
-	
-	SvgNest.prototype.getBoundingBox = function(part) {
-		let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-	
-		part.forEach(point => {
-			if (point.x < minX) minX = point.x;
-			if (point.y < minY) minY = point.y;
-			if (point.x > maxX) maxX = point.x;
-			if (point.y > maxY) maxY = point.y;
-		});
-	
-		return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
-	};	
 	
 	SvgParser.prototype.config = function(config){
 		this.conf.tolerance = config.tolerance;
