@@ -11,14 +11,34 @@
             height: 600px;
             border: 1px solid #ccc;
         }
+
+        h1 {
+            color: #333;
+        }
+        .button {
+            display: inline-block;
+            margin: 10px;
+            padding: 15px 25px;
+            font-size: 16px;
+            color: #fff;
+            background-color: #007bff;
+            border: none;
+            border-radius: 5px;
+            text-decoration: none;
+            transition: background-color 0.3s ease;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
     </style>
 </head>
 
 <body>
     <h1>SVG Nesting and Packing</h1>
     <h2>Current date and time:<span id="datetime"></span></h2>
-    <input type="file" id="file-input" accept=".svg" />
-    <button id="download-button">Download Result</button>
+    <input class="button" type="file" id="file-input" accept=".svg" />
+    <button  class="button" id="download-button">Download Result</button>
+    <a href="../index.html" class="button">Back to Main Index</a>
     <div id="svg-container"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/svg.js/3.1.1/svg.min.js"></script>
