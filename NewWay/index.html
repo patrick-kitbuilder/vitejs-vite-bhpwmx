@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVG Nesting and Packing</title>
+    <style>
+        #svg-container {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>SVG Nesting and Packing</h1>
+    <h2>Current date and time:<span id="datetime"></span></h2>
+    <input type="file" id="file-input" accept=".svg" />
+    <button id="download-button">Download Result</button>
+    <div id="svg-container"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/svg.js/3.1.1/svg.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/svg.path.js/1.0.4/svg.path.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/svgdom/0.1.0/svgdom.min.js"></script>
+    <script>
+        document.getElementById('file-input').addEventListener('change', handleFileSelect, false);
+        document.getElementById('download-button').addEventListener('click', downloadSVG, false);
+
+        let draw;
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const svgContent = e.target.result;
+                processSVG(svgContent);
+            };
+            reader.readAsText(file);
+        }
+
+        function processSVG(svgContent) {
+            document.getElementById('svg-container').innerHTML = ''; // Clear previous SVG
+
+            // Create an SVG container
+            draw = SVG().addTo('#svg-container').size('100%', '100%');
+            const svgElement = draw.svg(svgContent).first();
+
+            // Assuming all parts are paths, collect all path elements
+            const paths = svgElement.find('path');
+
+            // Group paths based on their connections
+            const groups = groupPaths(paths);
+
+            // Create a new group for rearranged paths
+            const newGroup = draw.group();
+
+            groups.forEach(group => {
+                const g = newGroup.group();
+                group.forEach(path => {
+                    g.add(path.clone());
+                });
+                arrangeGroup(g);
+            });
+        }
+
+        function groupPaths(paths) {
+            const groups = [];
+            const visited = new Set();
+
+            paths.each(function () {
+                if (!visited.has(this)) {
+                    const group = [];
+                    dfs(this, group, visited);
+                    groups.push(group);
+                }
+            });
+
+            return groups;
+        }
+
+        function dfs(path, group, visited) {
+            visited.add(path);
+            group.push(path);
+
+            const bbox = path.bbox();
+
+            path.parent().children().each(function () {
+                if (!visited.has(this) && this.type === 'path') {
+                    const otherBBox = this.bbox();
+                    if (isConnected(bbox, otherBBox)) {
+                        dfs(this, group, visited);
+                    }
+                }
+            });
+        }
+
+        function isConnected(bbox1, bbox2) {
+            const threshold = 5; // Tolerance for considering parts connected
+            return !(bbox1.x2 < bbox2.x - threshold || bbox1.x > bbox2.x2 + threshold || bbox1.y2 < bbox2.y - threshold || bbox1.y > bbox2.y2 + threshold);
+        }
+
+        function arrangeGroup(group) {
+            const spacing = 10;
+            let xOffset = 0;
+            let yOffset = 0;
+
+            group.each(function (i) {
+                this.move(xOffset, yOffset);
+                xOffset += this.bbox().width + spacing;
+
+                if (xOffset > draw.width() - this.bbox().width) {
+                    xOffset = 0;
+                    yOffset += this.bbox().height + spacing;
+                }
+            });
+        }
+
+        function downloadSVG() {
+            if (!draw) return;
+
+            const svgData = draw.svg();
+            const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'nested-output.svg';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        // create a function to update the date and time
+        function updateDateTime() {
+            // create a new `Date` object
+            const now = new Date();
+
+            // get the current date and time as a string
+            const currentDateTime = now.toLocaleString();
+
+            // update the `textContent` property of the `span` element with the `id` of `datetime`
+            document.querySelector('#datetime').textContent = currentDateTime;
+        }
+        updateDateTime();
+    </script>
+</body>
+
+</html>
